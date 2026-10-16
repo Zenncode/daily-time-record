@@ -2,6 +2,16 @@ export function appTimeZone() {
   return process.env.APP_TIMEZONE || "Asia/Manila";
 }
 
+export function appNow() {
+  const testTime = process.env.DTR_TEST_NOW;
+  if (process.env.NODE_ENV !== "production" && testTime) {
+    const date = new Date(testTime);
+    if (Number.isNaN(date.getTime())) throw new Error("DTR_TEST_NOW must be a valid ISO-8601 timestamp.");
+    return date;
+  }
+  return new Date();
+}
+
 export function workDateFor(date: Date, timeZone = appTimeZone()) {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone,
@@ -83,7 +93,7 @@ export function workedSeconds(
   clockOut: Date | null,
   totalBreakSeconds: number,
   breakStartedAt: Date | null = null,
-  now = new Date(),
+  now = appNow(),
 ) {
   const end = clockOut ?? now;
   const activeBreak = breakStartedAt ? Math.max(0, Math.floor((end.getTime() - breakStartedAt.getTime()) / 1000)) : 0;

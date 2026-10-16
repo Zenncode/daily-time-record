@@ -1,12 +1,13 @@
 import { db } from "@/lib/db";
 import { requireManager } from "@/lib/session";
-import { appTimeZone, durationLabel, formatTime, formatWorkDate, workDateFor, workedSeconds } from "@/lib/time";
+import { appNow, appTimeZone, durationLabel, formatTime, formatWorkDate, workDateFor, workedSeconds } from "@/lib/time";
+import { isLateClockIn } from "@/lib/schedule";
 import ExportForm from "./export-form";
 
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ from?: string; to?: string }> }) {
   const viewer = await requireManager();
   const params = await searchParams;
-  const now = new Date();
+  const now = appNow();
   const defaultTo = workDateFor(now);
   const defaultFrom = `${defaultTo.slice(0, 7)}-01`;
   const from = params.from && /^\d{4}-\d{2}-\d{2}$/.test(params.from) ? params.from : defaultFrom;
@@ -40,7 +41,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
     <section className="card section-spacer">
       <div className="card-header"><div><h2 className="card-title">Attendance details</h2><p className="card-description">Times are displayed in {appTimeZone()}.</p></div></div>
       {entries.length ? <div className="table-wrap"><table><thead><tr><th>Employee</th><th>Department</th><th>Date</th><th>Clock in</th><th>Clock out</th><th>Break</th><th>Hours worked</th><th>Status</th></tr></thead><tbody>{entries.map((entry) => <tr key={entry.id}>
-        <td className="cell-primary">{entry.user.name}</td><td>{entry.user.department || "—"}</td><td>{formatWorkDate(entry.workDate)}</td><td>{formatTime(entry.clockIn)}</td><td>{formatTime(entry.clockOut)}</td><td>{durationLabel(entry.totalBreakSeconds)}</td><td className="cell-primary">{durationLabel(workedSeconds(entry.clockIn, entry.clockOut, entry.totalBreakSeconds))}</td><td><span className={`status-pill ${entry.clockOut ? "status-complete" : ""}`}>{entry.clockOut ? "Complete" : "In progress"}</span></td>
+        <td className="cell-primary">{entry.user.name}</td><td>{entry.user.department || "—"}</td><td>{formatWorkDate(entry.workDate)}</td><td>{formatTime(entry.clockIn)}</td><td>{formatTime(entry.clockOut)}</td><td>{durationLabel(entry.totalBreakSeconds)}</td><td className="cell-primary">{durationLabel(workedSeconds(entry.clockIn, entry.clockOut, entry.totalBreakSeconds))}</td><td>{isLateClockIn(entry.clockIn, entry.workDate) && <span className="status-pill status-late" style={{ marginRight: 6 }}>Late</span>}<span className={`status-pill ${entry.clockOut ? "status-complete" : ""}`}>{entry.clockOut ? "Complete" : "In progress"}</span></td>
       </tr>)}</tbody></table></div> : <div className="empty-state">No attendance records match this report period.</div>}
     </section>
   </main>;

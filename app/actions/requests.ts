@@ -4,6 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireManager } from "@/lib/session";
+import { publishUserAttendanceUpdate } from "@/lib/realtime";
+import { workDateFor } from "@/lib/time";
+import { canClockOutAt } from "@/lib/schedule";
 
 export async function reviewRequestAction(formData: FormData) {
   const reviewer = await requireManager();
@@ -23,11 +26,14 @@ export async function reviewRequestAction(formData: FormData) {
   if (request.status !== "PENDING") redirect("/requests?error=already-reviewed");
 
   if (decision === "APPROVED" && request.type === "CLOCK_IN" && request.requestedAt &&
-      request.attendance.clockOut && request.requestedAt >= request.attendance.clockOut) {
+      ((request.attendance.clockOut && request.requestedAt >= request.attendance.clockOut) ||
+        workDateFor(request.requestedAt) !== request.attendance.workDate)) {
     redirect("/requests?error=invalid-correction");
   }
   if (decision === "APPROVED" && request.type === "CLOCK_OUT" && request.requestedAt &&
-      request.requestedAt <= request.attendance.clockIn) {
+      (request.requestedAt <= request.attendance.clockIn ||
+        workDateFor(request.requestedAt) !== request.attendance.workDate ||
+        !canClockOutAt(request.attendance.workDate, request.requestedAt))) {
     redirect("/requests?error=invalid-correction");
   }
 
@@ -67,6 +73,7 @@ export async function reviewRequestAction(formData: FormData) {
   });
   if (!reviewed) redirect("/requests?error=already-reviewed");
 
+  await publishUserAttendanceUpdate(request.requesterId);
   revalidatePath("/requests");
   revalidatePath("/attendance");
   revalidatePath("/dashboard");

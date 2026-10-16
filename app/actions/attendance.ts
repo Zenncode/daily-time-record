@@ -4,17 +4,20 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireSession } from "@/lib/session";
-import { dateTimeLocalInZone, workDateFor } from "@/lib/time";
+import { appNow, dateTimeLocalInZone, workDateFor } from "@/lib/time";
 import { correctionSchema } from "@/lib/validators";
+import { publishUserAttendanceUpdate } from "@/lib/realtime";
+import { canClockOutAt, isScheduledWorkday } from "@/lib/schedule";
 
 async function currentAttendance(userId: string) {
-  return db.attendanceDay.findUnique({ where: { userId_workDate: { userId, workDate: workDateFor(new Date()) } } });
+  return db.attendanceDay.findUnique({ where: { userId_workDate: { userId, workDate: workDateFor(appNow()) } } });
 }
 
 export async function clockInAction() {
   const user = await requireSession();
-  const now = new Date();
+  const now = appNow();
   const workDate = workDateFor(now);
+  if (!isScheduledWorkday(workDate)) redirect("/dashboard?error=not-a-workday");
   try {
     await db.$transaction(async (tx) => {
       const record = await tx.attendanceDay.create({ data: { userId: user.id, workDate, clockIn: now } });
@@ -28,6 +31,7 @@ export async function clockInAction() {
     }
     throw error;
   }
+  await publishUserAttendanceUpdate(user.id);
   revalidatePath("/dashboard");
   revalidatePath("/attendance");
 }
@@ -37,7 +41,10 @@ export async function clockOutAction() {
   const record = await currentAttendance(user.id);
   if (!record || record.clockOut) redirect("/dashboard?error=not-clocked-in");
   if (record.breakStartedAt) redirect("/dashboard?error=end-break-first");
-  const now = new Date();
+  const now = appNow();
+  if (!canClockOutAt(record.workDate, now)) {
+    redirect("/dashboard?error=clock-out-before-schedule");
+  }
   const updated = await db.$transaction(async (tx) => {
     const result = await tx.attendanceDay.updateMany({
       where: { id: record.id, clockOut: null, breakStartedAt: null },
@@ -51,6 +58,7 @@ export async function clockOutAction() {
     return result;
   });
   if (!updated.count) redirect("/dashboard?error=not-clocked-in");
+  await publishUserAttendanceUpdate(user.id);
   revalidatePath("/dashboard");
   revalidatePath("/attendance");
 }
@@ -65,7 +73,7 @@ export async function breakAction(formData: FormData) {
     const updated = await db.$transaction(async (tx) => {
       const result = await tx.attendanceDay.updateMany({
         where: { id: record.id, clockOut: null, breakStartedAt: null },
-        data: { breakStartedAt: new Date() },
+        data: { breakStartedAt: appNow() },
       });
       if (result.count) {
         await tx.auditLog.create({
@@ -77,7 +85,7 @@ export async function breakAction(formData: FormData) {
     if (!updated.count) redirect("/dashboard?error=break-already-started");
   } else if (action === "end") {
     if (!record.breakStartedAt) redirect("/dashboard?error=no-active-break");
-    const seconds = Math.max(0, Math.floor((Date.now() - record.breakStartedAt.getTime()) / 1000));
+    const seconds = Math.max(0, Math.floor((appNow().getTime() - record.breakStartedAt.getTime()) / 1000));
     const updated = await db.$transaction(async (tx) => {
       const result = await tx.attendanceDay.updateMany({
         where: { id: record.id, clockOut: null, breakStartedAt: record.breakStartedAt },
@@ -100,6 +108,7 @@ export async function breakAction(formData: FormData) {
   } else {
     redirect("/dashboard?error=invalid-action");
   }
+  await publishUserAttendanceUpdate(user.id);
   revalidatePath("/dashboard");
   revalidatePath("/attendance");
 }
@@ -121,7 +130,11 @@ export async function requestCorrectionAction(formData: FormData) {
   const { type, requestedAt, requestedBreak, reason } = parsed.data;
   const parsedDate = requestedAt ? dateTimeLocalInZone(requestedAt) : null;
   if (requestedAt && !parsedDate) redirect("/attendance?error=invalid-request");
+  if (parsedDate && workDateFor(parsedDate) !== record.workDate) redirect("/attendance?error=invalid-request");
   if (type === "CLOCK_OUT" && !record.clockOut) redirect("/attendance?error=invalid-request");
+  if (type === "CLOCK_OUT" && parsedDate && !canClockOutAt(record.workDate, parsedDate)) {
+    redirect("/attendance?error=invalid-request");
+  }
   if (type === "CLOCK_IN" && parsedDate && record.clockOut && parsedDate >= record.clockOut) {
     redirect("/attendance?error=invalid-request");
   }
@@ -138,6 +151,7 @@ export async function requestCorrectionAction(formData: FormData) {
       reason,
     },
   });
+  await publishUserAttendanceUpdate(user.id);
   revalidatePath("/attendance");
   revalidatePath("/requests");
   redirect("/attendance?success=request-submitted");

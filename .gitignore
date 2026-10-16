@@ -1,6 +1,9 @@
 node_modules
 .next
 out
+playwright-report
+test-results
+.playwright
 .env
 .env.*
 !.env.example

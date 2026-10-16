@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { CalendarDays, ClipboardCheck, LayoutDashboard, LogOut, Users, Clock3, Leaf, BarChart3 } from "lucide-react";
+import { CalendarDays, ClipboardCheck, LayoutDashboard, LogOut, Users, Leaf, BarChart3 } from "lucide-react";
 import { requireSession } from "@/lib/session";
 import { logoutAction } from "@/app/actions/auth";
-import { appTimeZone } from "@/lib/time";
+import RealtimeUpdates from "@/app/(app)/realtime-updates";
 
 export default async function AppLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const user = await requireSession();
@@ -34,7 +34,7 @@ export default async function AppLayout({ children }: Readonly<{ children: React
         </div>
       </aside>
       <div className="main-area">
-        <header className="topbar"><div className="crumb">Workspace <span style={{ padding: "0 7px", color: "#c2cbc5" }}>/</span> {user.role === "EMPLOYEE" ? "My time" : "Attendance management"}</div><div className="topbar-right"><span className="timezone"><Clock3 size={12} style={{ verticalAlign: "-2px", marginRight: 5 }} />{appTimeZone()}</span><span className="avatar" style={{ width: 29, height: 29, fontSize: 10 }}>{initials}</span></div></header>
+        <header className="topbar"><div className="crumb">Workspace <span style={{ padding: "0 7px", color: "#c2cbc5" }}>/</span> {user.role === "EMPLOYEE" ? "My time" : "Attendance management"}</div><div className="topbar-right"><RealtimeUpdates /><span className="avatar" style={{ width: 29, height: 29, fontSize: 10 }}>{initials}</span></div></header>
         {children}
       </div>
     </div>

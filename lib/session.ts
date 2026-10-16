@@ -15,6 +15,10 @@ export async function createSession(user: SessionUser) {
   }
   const token = await new SignJWT(user)
     .setProtectedHeader({ alg: "HS256" })
+    .setIssuer("daymark")
+    .setAudience("daymark-session")
+    .setIssuer("daymark")
+    .setAudience("daymark-session")
     .setIssuedAt()
     .setExpirationTime("8h")
     .sign(secret);
@@ -33,9 +37,16 @@ export async function getSession(): Promise<SessionUser | null> {
   if (!token) return null;
   let payload;
   try {
-    ({ payload } = await jwtVerify(token, secret));
+    ({ payload } = await jwtVerify(token, secret, {
+      algorithms: ["HS256"],
+      issuer: "daymark",
+      audience: "daymark-session",
+    }));
   } catch (error) {
-    if (error instanceof Error && error.name !== "JWTExpired" && error.name !== "JWSSignatureVerificationFailed") {
+    if (
+      error instanceof Error &&
+      !["JWTExpired", "JWSSignatureVerificationFailed", "JWTClaimValidationFailed"].includes(error.name)
+    ) {
       console.error("Session verification failed:", error);
     }
     return null;
