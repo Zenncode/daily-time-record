@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { CalendarDays, ClipboardCheck, LayoutDashboard, LogOut, Users, Leaf, BarChart3 } from "lucide-react";
+import { CalendarDays, ClipboardCheck, LayoutDashboard, Users, Leaf, BarChart3 } from "lucide-react";
 import { requireSession } from "@/lib/session";
-import { logoutAction } from "@/app/actions/auth";
 import RealtimeUpdates from "@/app/(app)/realtime-updates";
+import AccountMenu from "@/app/(app)/account-menu";
 
 export default async function AppLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const user = await requireSession();
@@ -29,8 +29,8 @@ export default async function AppLayout({ children }: Readonly<{ children: React
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <div className="profile"><div className="avatar">{initials}</div><div><div className="profile-name">{user.name}</div><div className="profile-role">{user.role.toLowerCase()}</div></div></div>
-          <form action={logoutAction}><button className="nav-link" style={{ width: "100%", border: 0, background: "transparent" }}><LogOut size={16} />Sign out</button></form>
+          <div className="profile"><div className="avatar">{initials}</div><div className="profile-copy"><div className="profile-name">{user.name}</div><div className="profile-role">{user.role.toLowerCase()}</div></div></div>
+          <AccountMenu isAdmin={user.role === "ADMIN"} />
         </div>
       </aside>
       <div className="main-area">

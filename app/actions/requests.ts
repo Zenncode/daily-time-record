@@ -5,11 +5,13 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireManager } from "@/lib/session";
 import { publishUserAttendanceUpdate } from "@/lib/realtime";
-import { workDateFor } from "@/lib/time";
+import { appNow, workDateFor } from "@/lib/time";
 import { canClockOutAt } from "@/lib/schedule";
+import { getSystemSettings } from "@/lib/system-settings";
 
 export async function reviewRequestAction(formData: FormData) {
   const reviewer = await requireManager();
+  const settings = await getSystemSettings();
   const requestId = String(formData.get("requestId") ?? "");
   const rawDecision = formData.get("decision");
   const reviewNote = String(formData.get("reviewNote") ?? "").trim();
@@ -27,13 +29,13 @@ export async function reviewRequestAction(formData: FormData) {
 
   if (decision === "APPROVED" && request.type === "CLOCK_IN" && request.requestedAt &&
       ((request.attendance.clockOut && request.requestedAt >= request.attendance.clockOut) ||
-        workDateFor(request.requestedAt) !== request.attendance.workDate)) {
+        workDateFor(request.requestedAt, settings.timeZone) !== request.attendance.workDate)) {
     redirect("/requests?error=invalid-correction");
   }
   if (decision === "APPROVED" && request.type === "CLOCK_OUT" && request.requestedAt &&
       (request.requestedAt <= request.attendance.clockIn ||
-        workDateFor(request.requestedAt) !== request.attendance.workDate ||
-        !canClockOutAt(request.attendance.workDate, request.requestedAt))) {
+        workDateFor(request.requestedAt, settings.timeZone) !== request.attendance.workDate ||
+        !canClockOutAt(request.attendance.workDate, request.requestedAt, settings.timeZone, settings.shiftEnd))) {
     redirect("/requests?error=invalid-correction");
   }
 
@@ -54,6 +56,17 @@ export async function reviewRequestAction(formData: FormData) {
       } else if (request.type === "CLOCK_OUT" && request.requestedAt) {
         await tx.attendanceDay.update({ where: { id: request.attendanceId }, data: { clockOut: request.requestedAt, status: "COMPLETE" } });
       } else if (request.type === "BREAK_TOTAL" && request.requestedBreak !== null) {
+        if (request.attendance.breakStartedAt) {
+          const closedInterval = await tx.breakInterval.updateMany({
+            where: {
+              attendanceId: request.attendanceId,
+              startedAt: request.attendance.breakStartedAt,
+              endedAt: null,
+            },
+            data: { endedAt: appNow() },
+          });
+          if (closedInterval.count !== 1) throw new Error("The active break interval could not be closed consistently.");
+        }
         await tx.attendanceDay.update({
           where: { id: request.attendanceId },
           data: { totalBreakSeconds: request.requestedBreak * 60, breakStartedAt: null },

@@ -40,6 +40,10 @@ async function employeeWorkflow(browser: Browser, onClockIn: () => Promise<void>
   await expect(page.getByRole("button", { name: "End break" })).toBeVisible();
   await page.getByRole("button", { name: "End break" }).click();
   await expect(page.getByRole("button", { name: "Start break" })).toBeVisible();
+  const breakInterval = await db.breakInterval.findFirst({
+    where: { attendance: { user: { email: employeeEmail } } },
+  });
+  expect(breakInterval?.endedAt).not.toBeNull();
 
   await page.goto("/attendance");
   const attendanceRow = page.getByRole("row").nth(1);
@@ -60,6 +64,26 @@ test("admin, employee and manager complete the DTR correction workflow", async (
   if (!adminEmail || !adminPassword) throw new Error("ADMIN_EMAIL and ADMIN_PASSWORD must be set for E2E tests.");
 
   await signIn(page, adminEmail, adminPassword);
+  await page.getByRole("button", { name: "Account options" }).click();
+  const accountMenu = page.getByRole("menu");
+  await expect(accountMenu.getByRole("menuitem", { name: "Configuration" })).toBeVisible();
+  await expect(accountMenu.getByRole("menuitem", { name: "Log out" })).toBeVisible();
+  await accountMenu.getByRole("menuitem", { name: "Configuration" }).click();
+  await expect(page).toHaveURL(/\/settings$/);
+
+  await page.getByLabel("Shift starts").fill("09:00");
+  await page.getByLabel("Shift ends").fill("18:00");
+  await page.getByRole("button", { name: "Save configuration" }).click();
+  await expect(page.getByText("System settings saved successfully.")).toBeVisible();
+  await page.goto("/dashboard");
+  await expect(page.locator(".schedule-notice")).toContainText("9:00 AM–6:00 PM");
+
+  await page.goto("/settings");
+  await page.getByLabel("Shift starts").fill("08:00");
+  await page.getByLabel("Shift ends").fill("17:00");
+  await page.getByRole("button", { name: "Save configuration" }).click();
+  await expect(page.getByText("System settings saved successfully.")).toBeVisible();
+
   await page.goto("/employees");
 
   await page.getByLabel("Full name").fill(managerName);
@@ -83,6 +107,8 @@ test("admin, employee and manager complete the DTR correction workflow", async (
   let employeePage: Page | undefined;
   try {
     await signIn(managerPage, managerEmail, testPassword);
+    await managerPage.goto("/settings");
+    await expect(managerPage).toHaveURL(/\/dashboard$/);
     ({ context: employeeContext, page: employeePage } = await employeeWorkflow(browser, async () => {
       const liveRow = managerPage.getByRole("row").filter({ hasText: employeeName });
       await expect(liveRow).toBeVisible();
@@ -97,10 +123,23 @@ test("admin, employee and manager complete the DTR correction workflow", async (
     await expect(managerPage.getByText("Request reviewed successfully.")).toBeVisible();
     await expect(managerPage.getByRole("row").filter({ hasText: employeeName })).toContainText("approved");
 
-    await managerPage.goto("/reports");
-    const reportRow = managerPage.getByRole("row").filter({ hasText: employeeName });
-    await expect(reportRow).toBeVisible();
-    await expect(reportRow).toContainText("15m");
+    await page.goto("/settings");
+    await page.getByLabel("Shift ends").fill("09:00");
+    await page.getByRole("button", { name: "Save configuration" }).click();
+    await expect(page.getByText("System settings saved successfully.")).toBeVisible();
+    try {
+      await managerPage.goto("/reports");
+      await expect(managerPage.getByRole("columnheader", { name: "Overtime" })).toBeVisible();
+      const reportRow = managerPage.getByRole("row").filter({ hasText: employeeName });
+      await expect(reportRow).toBeVisible();
+      await expect(reportRow).toContainText("15m");
+      await expect(reportRow).toContainText("0h 30m");
+    } finally {
+      await page.goto("/settings");
+      await page.getByLabel("Shift ends").fill("17:00");
+      await page.getByRole("button", { name: "Save configuration" }).click();
+      await expect(page.getByText("System settings saved successfully.")).toBeVisible();
+    }
 
     await employeePage.goto("/attendance");
     const correctedRow = employeePage.getByRole("row").nth(1);
@@ -113,6 +152,15 @@ test("admin, employee and manager complete the DTR correction workflow", async (
 
 test("rejects invalid credentials without creating a session", async ({ page }) => {
   await page.goto("/login");
+  await page.getByRole("button", { name: "Demo accounts" }).click();
+  const demoDialog = page.getByRole("dialog", { name: "Demo accounts" });
+  await expect(demoDialog.getByText("admin@dtr.com")).toBeVisible();
+  await expect(demoDialog.getByText("manager@dtr.com")).toBeVisible();
+  await expect(demoDialog.getByText("employee1@dtr.com")).toBeVisible();
+  await expect(demoDialog.getByText("employee2@dtr.com")).toBeVisible();
+  await expect(demoDialog.getByText("123456").first()).toBeVisible();
+  await demoDialog.getByRole("button", { name: "Close demo accounts" }).click();
+
   await page.getByLabel("Email address").fill(`missing-${runId}@example.test`);
   await page.getByLabel("Password").fill("incorrect-password");
   await page.getByRole("button", { name: "Sign in" }).click();

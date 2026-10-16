@@ -30,6 +30,16 @@ test("clock-out is blocked before 5:00 PM and allowed at or after 5:00 PM", () =
   assert.equal(canClockOutAt(workDate, new Date("2026-10-16T09:00:00.001Z"), "Asia/Manila"), true);
 });
 
+test("custom configured workdays and shift times control lateness and clock-out", () => {
+  const customDays = [0, 2, 5];
+  assert.equal(isScheduledWorkday("2026-10-16", customDays), true);
+  assert.equal(isScheduledWorkday("2026-10-15", customDays), false);
+  assert.equal(isLateClockIn(new Date("2026-10-16T01:00:00.000Z"), workDate, "Asia/Manila", "09:00"), false);
+  assert.equal(isLateClockIn(new Date("2026-10-16T01:00:00.001Z"), workDate, "Asia/Manila", "09:00"), true);
+  assert.equal(canClockOutAt(workDate, new Date("2026-10-16T09:59:59.999Z"), "Asia/Manila", "18:00"), false);
+  assert.equal(canClockOutAt(workDate, new Date("2026-10-16T10:00:00.000Z"), "Asia/Manila", "18:00"), true);
+});
+
 test("8:00 AM to 5:00 PM with a one-hour unpaid break is 8 paid duty hours", () => {
   assert.equal(
     workedSeconds(new Date("2026-10-16T00:00:00.000Z"), new Date("2026-10-16T09:00:00.000Z"), 3600),

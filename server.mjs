@@ -3,6 +3,7 @@ import nextEnv from "@next/env";
 import next from "next";
 import { PrismaClient } from "@prisma/client";
 import { jwtVerify } from "jose";
+import { createClient } from "redis";
 import { WebSocket, WebSocketServer } from "ws";
 
 nextEnv.loadEnvConfig(process.cwd());
@@ -28,7 +29,49 @@ const secret = new TextEncoder().encode(sessionSecret);
 const sockets = new Map();
 const realtimePath = "/_dtr/realtime";
 const publishPath = "/_dtr/realtime/publish";
+const redisChannelPrefix = "daymark:realtime";
 const validRoles = new Set(["ADMIN", "MANAGER", "EMPLOYEE"]);
+const redisClient = process.env.REDIS_URL ? createClient({ url: process.env.REDIS_URL }) : null;
+const redisSubscriber = process.env.REDIS_URL ? createClient({ url: process.env.REDIS_URL }) : null;
+let redisEnabled = false;
+
+function getRedisChannel(channel) {
+  return `${redisChannelPrefix}:${channel}`;
+}
+
+function dispatchLocalMessage(channel, message) {
+  const delivered = new Set();
+  for (const socket of sockets.get(channel) ?? []) {
+    if (socket.readyState === WebSocket.OPEN && !delivered.has(socket)) {
+      socket.send(message);
+      delivered.add(socket);
+    }
+  }
+  return delivered.size;
+}
+
+async function setupRedis() {
+  if (!redisClient || !redisSubscriber) return;
+
+  redisClient.on("error", (error) => console.error("Realtime Redis client error:", error.message));
+  redisSubscriber.on("error", (error) => console.error("Realtime Redis subscriber error:", error.message));
+
+  try {
+    await redisClient.connect();
+    await redisSubscriber.connect();
+    await redisSubscriber.pSubscribe(getRedisChannel("*"));
+    redisSubscriber.on("pmessage", (_pattern, channel, message) => {
+      const localChannel = channel.startsWith(`${redisChannelPrefix}:`)
+        ? channel.slice(redisChannelPrefix.length + 1)
+        : channel;
+      dispatchLocalMessage(localChannel, message);
+    });
+    redisEnabled = true;
+  } catch (error) {
+    console.warn("Realtime Redis unavailable; falling back to in-memory relay.", error instanceof Error ? error.message : error);
+    redisEnabled = false;
+  }
+}
 
 function parseRequestUrl(request) {
   const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
@@ -147,7 +190,7 @@ function handlePublish(request, response) {
         sendJson(response, 413, { error: "Payload too large." });
       }
     });
-    request.on("end", () => {
+    request.on("end", async () => {
       if (tooLarge) return;
       let parsed;
       try {
@@ -164,6 +207,18 @@ function handlePublish(request, response) {
       ) return sendJson(response, 400, { error: "Invalid channels." });
 
       const message = JSON.stringify({ type: "refresh", sentAt: Date.now() });
+      if (redisEnabled && redisClient) {
+        try {
+          for (const channel of parsed.channels) {
+            await redisClient.publish(getRedisChannel(channel), message);
+          }
+          return sendJson(response, 200, { delivered: 0, published: parsed.channels.length });
+        } catch (error) {
+          console.error("Realtime Redis publish failed:", error);
+          return sendJson(response, 500, { error: "Realtime publish failed." });
+        }
+      }
+
       const delivered = new Set();
       for (const channel of parsed.channels) {
         for (const socket of sockets.get(channel) ?? []) {
@@ -187,6 +242,7 @@ function handlePublish(request, response) {
   });
 }
 
+await setupRedis();
 await app.prepare();
 const handleUpgrade = app.getUpgradeHandler();
 
@@ -293,6 +349,8 @@ async function shutdown() {
   clearInterval(heartbeat);
   clearInterval(sessionRevalidation);
   for (const socket of websocketServer.clients) socket.close(1001, "Server shutting down");
+  if (redisClient) await redisClient.quit();
+  if (redisSubscriber) await redisSubscriber.quit();
   await new Promise((resolve) => server.close(resolve));
   await database.$disconnect();
   process.exit(0);

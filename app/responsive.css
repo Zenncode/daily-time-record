@@ -1,0 +1,279 @@
+@media (max-width: 1400px) {
+  .dashboard-page .dashboard-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 1000px) {
+  .sidebar {
+    width: 210px;
+  }
+
+  .main-area {
+    width: calc(100% - 210px);
+    margin-left: 210px;
+  }
+
+  .topbar {
+    padding-right: 25px;
+    padding-left: 25px;
+  }
+
+  .page {
+    padding: 30px 25px 48px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .settings-grid {
+    max-width: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .sidebar {
+    position: static;
+    width: 100%;
+    height: auto;
+    padding: 12px 12px 7px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .brand {
+    padding: 0 7px 11px;
+  }
+
+  .nav-label {
+    display: none;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 3px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+
+  .nav-link {
+    flex: none;
+    padding: 9px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .sidebar-bottom {
+    margin-top: 8px;
+    padding: 4px;
+    border-top: 0;
+  }
+
+  .profile {
+    padding: 4px;
+  }
+
+  .main-area {
+    width: 100%;
+    margin: 0;
+  }
+
+  .app-shell {
+    display: block;
+  }
+
+  .topbar {
+    height: 48px;
+    padding: 0 17px;
+  }
+
+  .page {
+    padding: 24px 16px 40px;
+  }
+
+  .page-heading {
+    margin-bottom: 20px;
+  }
+
+  h1 {
+    font-size: 23px;
+  }
+
+  .stats-grid {
+    gap: 10px;
+  }
+
+  .stat-card {
+    min-height: 115px;
+    padding: 15px;
+  }
+
+  .stat-value {
+    margin-top: 18px;
+    font-size: 23px;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .login-screen {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .login-art {
+    display: none;
+  }
+
+  .login-panel {
+    min-height: 100vh;
+    padding: 25px;
+  }
+
+  .settings-day-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .settings-time-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .card {
+    padding: 16px;
+  }
+
+  .card-header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .table-wrap {
+    margin-right: -16px;
+    margin-left: -16px;
+    padding: 0 16px;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .correction-modal {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .topbar {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .crumb {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .topbar-right {
+    flex: none;
+    gap: 7px;
+  }
+
+  .page {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .stats-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .stat-card {
+    min-height: 100px;
+  }
+
+  .card {
+    padding: 14px;
+    border-radius: 11px;
+  }
+
+  .card-header {
+    gap: 9px;
+  }
+
+  .filters,
+  .inline-form {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .filters .field,
+  .inline-form .input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .button-group {
+    align-items: stretch;
+  }
+
+  .correction-modal-backdrop {
+    padding: 10px;
+  }
+
+  .correction-modal {
+    max-height: 92vh;
+    max-height: 92dvh;
+    padding: 18px;
+  }
+
+  .correction-submit {
+    width: 100%;
+  }
+
+  .demo-modal {
+    padding: 18px;
+  }
+}
+
+@media (max-width: 360px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  .page-heading {
+    flex-direction: column;
+  }
+
+  .page-heading > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .page-heading .button-group,
+  .page-heading .button-group .button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .page-heading .button-group .button {
+    padding-right: 8px;
+    padding-left: 8px;
+    text-align: center;
+    white-space: normal;
+  }
+
+  .clock-time {
+    font-size: clamp(28px, 10vw, 36px);
+    letter-spacing: -1px;
+  }
+
+  .clock-card,
+  .card {
+    min-width: 0;
+  }
+}

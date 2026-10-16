@@ -2,6 +2,7 @@ import { loginAction } from "@/app/actions/auth";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { Clock3, Leaf, ShieldCheck } from "lucide-react";
+import DemoAccountsModal from "./demo-accounts-modal";
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   if (await getSession()) redirect("/dashboard");
@@ -14,6 +15,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <div className="field"><label htmlFor="password">Password</label><input className="input" id="password" name="password" type="password" autoComplete="current-password" placeholder="Enter your password" required /></div>
         <button className="button button-primary">Sign in</button>
       </form>
+      <DemoAccountsModal />
       <div className="form-note">Your organization administrator creates your account.<br />Contact them if you need access or password assistance.</div>
     </div></section>
   </main>;

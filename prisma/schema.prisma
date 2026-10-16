@@ -65,6 +65,7 @@ model AttendanceDay {
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
   correctionRequests CorrectionRequest[]
+  breakIntervals    BreakInterval[]
 
   @@unique([userId, workDate])
   @@index([workDate])
@@ -104,4 +105,26 @@ model AuditLog {
 
   @@index([entityType, entityId, createdAt])
   @@index([createdAt])
+}
+
+model BreakInterval {
+  id           String         @id @default(uuid()) @db.Uuid
+  attendanceId String         @db.Uuid
+  attendance   AttendanceDay  @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
+  startedAt    DateTime
+  endedAt      DateTime?
+  createdAt    DateTime       @default(now())
+
+  @@index([attendanceId, startedAt])
+  @@index([attendanceId, endedAt])
+}
+
+model SystemSettings {
+  id         String   @id @default("global")
+  timeZone    String   @default("Asia/Manila")
+  workDays    Int[]    @default([1, 2, 3, 4, 5])
+  shiftStart  String   @default("08:00")
+  shiftEnd    String   @default("17:00")
+  breakPolicy String  @default("ACTUAL_RECORDED")
+  updatedAt  DateTime @updatedAt
 }
