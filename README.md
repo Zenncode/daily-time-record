@@ -32,7 +32,13 @@ Requirements: Node.js 20+, npm, PostgreSQL, and an optional Redis server for mul
 
 The seed command creates the initial administrator only if that email does not already exist; it does not reset an existing password. The initial timezone defaults to `APP_TIMEZONE` (or `Asia/Manila`) until an administrator saves system settings.
 
+## Deploy on Render
+
+Create a Render Blueprint from this repository and use [`render.yaml`](./render.yaml). Before deploying, provide `ADMIN_NAME`, `ADMIN_EMAIL`, and a strong `ADMIN_PASSWORD` (at least 12 characters) when prompted. The Blueprint builds the app, applies Prisma migrations, seeds the initial administrator, and starts the custom Node server, including its same-origin WebSocket endpoint. It provisions a PostgreSQL database in Singapore; the web service uses the same region.
+
 ## Checks
+
+GitHub Actions runs lint, typecheck, unit tests, and a production build on pushes and pull requests using [`.github/workflows/ci.yml`](./.github/workflows/ci.yml).
 
 - `npm run typecheck`
 - `npm run lint`
