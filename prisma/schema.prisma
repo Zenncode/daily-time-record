@@ -1,0 +1,107 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  EMPLOYEE
+}
+
+enum AttendanceStatus {
+  PRESENT
+  COMPLETE
+}
+
+enum CorrectionType {
+  CLOCK_IN
+  CLOCK_OUT
+  BREAK_TOTAL
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id                String             @id @default(uuid()) @db.Uuid
+  name              String
+  email             String             @unique
+  passwordHash      String
+  role              Role               @default(EMPLOYEE)
+  department        String?
+  active            Boolean            @default(true)
+  managerId         String?            @db.Uuid
+  manager           User?              @relation("Team", fields: [managerId], references: [id], onDelete: SetNull)
+  team              User[]             @relation("Team")
+  attendance        AttendanceDay[]
+  correctionRequests CorrectionRequest[] @relation("Requester")
+  reviewedRequests  CorrectionRequest[] @relation("Reviewer")
+  auditEvents       AuditLog[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@index([managerId])
+  @@index([role, active])
+}
+
+model AttendanceDay {
+  id                String           @id @default(uuid()) @db.Uuid
+  userId            String           @db.Uuid
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workDate          String
+  clockIn           DateTime
+  clockOut          DateTime?
+  breakStartedAt    DateTime?
+  totalBreakSeconds Int              @default(0)
+  status            AttendanceStatus @default(PRESENT)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  correctionRequests CorrectionRequest[]
+
+  @@unique([userId, workDate])
+  @@index([workDate])
+  @@index([userId, clockIn])
+}
+
+model CorrectionRequest {
+  id             String         @id @default(uuid()) @db.Uuid
+  attendanceId   String         @db.Uuid
+  attendance     AttendanceDay  @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
+  requesterId    String         @db.Uuid
+  requester      User           @relation("Requester", fields: [requesterId], references: [id], onDelete: Cascade)
+  type           CorrectionType
+  requestedAt    DateTime?
+  requestedBreak Int?
+  reason         String
+  status         RequestStatus  @default(PENDING)
+  reviewerId     String?        @db.Uuid
+  reviewer       User?          @relation("Reviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  reviewNote     String?
+  reviewedAt     DateTime?
+  createdAt      DateTime       @default(now())
+
+  @@index([status, createdAt])
+  @@index([requesterId, createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String?  @db.Uuid
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action     String
+  entityType String
+  entityId   String
+  details    Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId, createdAt])
+  @@index([createdAt])
+}
