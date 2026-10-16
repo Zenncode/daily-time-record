@@ -17,6 +17,8 @@
     "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@neon/config": "^1.9.2",
+    "@neon/env": "^1.6.3",
     "@next/env": "^15.5.28",
     "@prisma/client": "^6.16.2",
     "bcryptjs": "^3.0.2",
