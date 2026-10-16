@@ -6,7 +6,6 @@ import { db } from "@/lib/db";
 import { requireSession } from "@/lib/session";
 import { appNow, dateTimeLocalInZone, workDateFor } from "@/lib/time";
 import { correctionSchema } from "@/lib/validators";
-import { publishUserAttendanceUpdate } from "@/lib/realtime";
 import { canClockOutAt, isScheduledWorkday } from "@/lib/schedule";
 import { getSystemSettings } from "@/lib/system-settings";
 
@@ -33,7 +32,6 @@ export async function clockInAction() {
     }
     throw error;
   }
-  await publishUserAttendanceUpdate(user.id);
   revalidatePath("/dashboard");
   revalidatePath("/attendance");
 }
@@ -61,7 +59,6 @@ export async function clockOutAction() {
     return result;
   });
   if (!updated.count) redirect("/dashboard?error=not-clocked-in");
-  await publishUserAttendanceUpdate(user.id);
   revalidatePath("/dashboard");
   revalidatePath("/attendance");
 }
@@ -121,7 +118,6 @@ export async function breakAction(formData: FormData) {
   } else {
     redirect("/dashboard?error=invalid-action");
   }
-  await publishUserAttendanceUpdate(user.id);
   revalidatePath("/dashboard");
   revalidatePath("/attendance");
 }
@@ -165,7 +161,6 @@ export async function requestCorrectionAction(formData: FormData) {
       reason,
     },
   });
-  await publishUserAttendanceUpdate(user.id);
   revalidatePath("/attendance");
   revalidatePath("/requests");
   redirect("/attendance?success=request-submitted");

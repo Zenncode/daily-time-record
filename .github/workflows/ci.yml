@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dtr?schema=public
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/dtr?schema=public
       SESSION_SECRET: ci-only-session-secret-that-is-at-least-32-characters
       ADMIN_NAME: CI Administrator
       ADMIN_EMAIL: admin@dtr.com

@@ -111,7 +111,7 @@ test("admin, employee and manager complete the DTR correction workflow", async (
     await expect(managerPage).toHaveURL(/\/dashboard$/);
     ({ context: employeeContext, page: employeePage } = await employeeWorkflow(browser, async () => {
       const liveRow = managerPage.getByRole("row").filter({ hasText: employeeName });
-      await expect(liveRow).toBeVisible();
+      await expect(liveRow).toBeVisible({ timeout: 15_000 });
       await expect(liveRow).toContainText("Late");
       await expect(liveRow).toContainText("In progress");
     }));

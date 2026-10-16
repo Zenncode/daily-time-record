@@ -26,7 +26,6 @@ export default defineConfig({
     url: "http://127.0.0.1:3101/login",
     env: {
       DTR_TEST_NOW: "2026-10-16T01:30:00.000Z",
-      REALTIME_PUBLISH_URL: "http://127.0.0.1:3101/_dtr/realtime/publish",
     },
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

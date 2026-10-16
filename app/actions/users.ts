@@ -5,7 +5,6 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
-import { publishRealtime } from "@/lib/realtime";
 
 export async function createEmployeeAction(formData: FormData) {
   const admin = await requireAdmin();
@@ -40,7 +39,6 @@ export async function createEmployeeAction(formData: FormData) {
     if (error instanceof Error && "code" in error && error.code === "P2002") redirect("/employees?error=email-in-use");
     throw error;
   }
-  await publishRealtime(["admin"]);
   revalidatePath("/employees");
   redirect("/employees?success=created");
 }
@@ -58,7 +56,6 @@ export async function setEmployeeActiveAction(formData: FormData) {
       data: { actorId: admin.id, action: active ? "EMPLOYEE_ACTIVATED" : "EMPLOYEE_DEACTIVATED", entityType: "User", entityId: userId },
     }),
   ]);
-  await publishRealtime(["admin"]);
   revalidatePath("/employees");
   redirect("/employees?success=updated");
 }
