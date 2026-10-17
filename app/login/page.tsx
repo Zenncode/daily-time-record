@@ -15,7 +15,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <div className="field"><label htmlFor="password">Password</label><input className="input" id="password" name="password" type="password" autoComplete="current-password" placeholder="Enter your password" required /></div>
         <button className="button button-primary">Sign in</button>
       </form>
-      <DemoAccountsModal />
+      {process.env.NODE_ENV === "development" && <DemoAccountsModal />}
       <div className="form-note">Your organization administrator creates your account.<br />Contact them if you need access or password assistance.</div>
     </div></section>
   </main>;

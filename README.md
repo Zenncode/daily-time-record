@@ -31,6 +31,7 @@ Requirements: Node.js 20+, npm, and PostgreSQL.
 6. Open `http://localhost:3000` and sign in with `ADMIN_EMAIL` and `ADMIN_PASSWORD`.
 
 The seed command creates the initial administrator only if that email does not already exist; it does not reset an existing password. The initial timezone defaults to `APP_TIMEZONE` (or `Asia/Manila`) until an administrator saves system settings.
+The login page's demo-account quick-access button is shown only in development mode and is hidden in production and Preview deployments.
 
 ## Deploy on Vercel
 
