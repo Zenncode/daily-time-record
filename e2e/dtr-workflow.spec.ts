@@ -152,6 +152,7 @@ test("admin, employee and manager complete the DTR correction workflow", async (
 
 test("rejects invalid credentials without creating a session", async ({ page }) => {
   await page.goto("/login");
+  await expect(page.getByRole("button", { name: "Demo accounts" })).toBeVisible();
   await page.getByRole("button", { name: "Demo accounts" }).click();
   const demoDialog = page.getByRole("dialog", { name: "Demo accounts" });
   await expect(demoDialog.getByText("admin@dtr.com")).toBeVisible();
